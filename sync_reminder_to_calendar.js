@@ -1,3 +1,9 @@
+/**
+ * @author [zackerzhuang]
+ * @email [zackerzhuang@outlook.com]
+ * @create date 2021-07-15 21:44:13
+ * @modify date 2021-07-15 21:44:13
+ */
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: green; icon-glyph: magic;
@@ -28,10 +34,24 @@ for(cal of calendar)
 const events = await CalendarEvent.between(startDate, endDate, calendar)
 console.log(`获取 ${events.length} 条日历`)
 
+var reminders_id_set = new Set(reminders.map(e=>e.identifier))
+//删除日历里提醒事项删除的事项
+events_created = events.filter(e=>e.notes != null && e.notes.includes("[Reminder]"))
+for(let event of events_created){
+      //console.warn(event.notes)
+      let reg = /(\[Reminder\])\s([A-Z0-9\-]*)/
+      let r = event.notes.match(reg)
+      //if(r) console.log(r[2])
+      if(!reminders_id_set.has(r[2]))
+      {
+        event.remove()
+      }
+}
+
 for (const reminder of reminders) {
   //reminder的标识符
   const targetNote = `[Reminder] ${reminder.identifier}`
-  const [targetEvent] = events.filter(e => e.notes != null && (e.notes.indexOf(targetNote) != -1))//过滤重复的reminder
+  const [targetEvent] = events.filter(e => e.notes != null && e.notes.includes(targetNote))//过滤重复的reminder
   if(!m_dict[reminder.calendar.title])
   {
         console.warn("找不到日历"+ reminder.calendar.title)
@@ -50,6 +70,7 @@ for (const reminder of reminders) {
   }
 }
 
+
 Script.complete()
 
 function updateEvent(event, reminder) {
@@ -62,11 +83,12 @@ function updateEvent(event, reminder) {
   if(reminder.isCompleted)
   {
     event.title = `✅${reminder.title}`
-    event.isAllDay = false
-    event.startDate = reminder.completionDate
-    var ending = new Date(reminder.completionDate)
-    ending.setHours(ending.getHours()+1)
-    event.endDate = ending
+    event.isAllDay = true
+     event.startDate = reminder.dueDate
+    event.endDate=reminder.dueDate
+//     var ending = new Date(reminder.completionDate)
+//     ending.setHours(ending.getHours()+1)
+//     event.endDate = ending
     
     var period = (reminder.dueDate-reminder.completionDate)/1000/3600/24
     period = period.toFixed(1)
@@ -126,5 +148,7 @@ function updateEvent(event, reminder) {
          event.endDate = ending
       }
     }
+    if(!event.dueDateIncludesTime)
+       event.isAllDay = true
   event.save()
 }
